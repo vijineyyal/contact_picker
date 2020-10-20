@@ -1,7 +1,3 @@
-// Copyright 2017 Michael Goderbauer. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
-
 package net.goderbauer.flutter.contactpicker;
 
 import android.app.Activity;
@@ -37,18 +33,20 @@ public class ContactPickerPlugin implements MethodCallHandler, PluginRegistry.Ac
 
   private Activity activity;
   private Result pendingResult;
+  String phone="11";
+String email="@";
+int phonedx=0;
+int emailIdx=0;
 
-  @Override
+   @Override
   public void onMethodCall(MethodCall call, Result result) {
     if (call.method.equals("selectContact")) {
-      if (pendingResult != null) {
-        pendingResult.error("multiple_requests", "Cancelled by a second request.", null);
-        pendingResult = null;
+      if (pendingResult == null) {
+        pendingResult = result;
+        Intent i = new Intent(Intent.ACTION_PICK, ContactsContract.Contacts.CONTENT_URI);
+        activity.startActivityForResult(i, PICK_CONTACT);
+      } else {
       }
-      pendingResult = result;
-
-      Intent i = new Intent(Intent.ACTION_PICK, ContactsContract.CommonDataKinds.Phone.CONTENT_URI);
-      activity.startActivityForResult(i, PICK_CONTACT);
     } else {
       result.notImplemented();
     }
@@ -64,23 +62,35 @@ public class ContactPickerPlugin implements MethodCallHandler, PluginRegistry.Ac
       pendingResult = null;
       return true;
     }
-    Uri contactUri = data.getData();
-    Cursor cursor = activity.getContentResolver().query(contactUri, null, null, null, null);
-    cursor.moveToFirst();
+    			Uri contactUri = data.getData();
 
-    int phoneType = cursor.getInt(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.TYPE));
-    String customLabel = cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.LABEL));
-    String label = (String) ContactsContract.CommonDataKinds.Email.getTypeLabel(activity.getResources(), phoneType, customLabel);
-    String number = cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER));
-    String fullName = cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME));
+                        String id = contactUri.getLastPathSegment();
+ 			Cursor cursor2 = activity.getContentResolver().query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                                null, ContactsContract.CommonDataKinds.Phone.CONTACT_ID + "=?", new String[] { id },
+                                null);
+                        Cursor cursor3 = activity.getContentResolver().query(ContactsContract.CommonDataKinds.Email.CONTENT_URI,
+                                null, ContactsContract.CommonDataKinds.Email.CONTACT_ID + "=?", new String[] { id },
+                                null);
+                        phonedx = cursor2.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DATA);
+ 			emailIdx = cursor3.getColumnIndex(ContactsContract.CommonDataKinds.Email.DATA);
 
-    HashMap<String, Object> phoneNumber = new HashMap<>();
-    phoneNumber.put("number", number);
-    phoneNumber.put("label", label);
+
+                        if (cursor2.moveToFirst()) {
+                           phone = cursor2.getString(phonedx);
+                        }
+			else{phone="";}
+			if (cursor3.moveToFirst()) {
+			email = cursor3.getString(emailIdx);  
+                        }
+			else{email="";}
+
+    
+
+
 
     HashMap<String, Object> contact = new HashMap<>();
-    contact.put("fullName", fullName);
-    contact.put("phoneNumber", phoneNumber);
+    contact.put("phoneNumber", phone+"");
+    contact.put("emailId", email+"");
 
     pendingResult.success(contact);
     pendingResult = null;
